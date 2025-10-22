@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOM</title>
+    <link href="new.css" rel="stylesheet">
+</head>
+<body>
+        <nav class="nav">
+            <h1><a href="#">DOM Manipulation</a></h1>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#about">About DOM</a></li>
+                <li><a href="#selectors">Selectors</a></li>
+                <li><a href="#changingContents">Changing Content and Attributes</a></li>
+                <li><a href="#stylingWithJavaScript">Styling With JavaScript</a></li>
+                <li><a href="#creatingRemovingElements">Creating and Removing Elements</a></li>
+                <li><a href="#eventHandling">Event Handling</a></li>
+            </ul>
+        </nav>
+
+        <div class="main">
+            <div id="home">
+                <h1>DOM (document object model)</h1>
+                <p>how JavaScript sees and controls a webpage.</p>
+                <button><a href="#about">Explore</a></button>
+            </div>
+            <div id="about">
+                <div class="left">
+                    <h2>About DOM</h2>
+                    <p>DOM is a programming interface that represents
+                        an HTML or XML document as a structured tree of objects.
+                    </p>
+                    <p>JavaScript can use the DOM to access, modify,
+                        or remove these elements dynamically.
+                   </p>
+                   <button id="treeButton">Show tree</button>
+                    <div class="tree" id="tree">
+                        <p id="p1">Document</p>
+                          <p id="p2">  └── html</p>
+                               <p id="p3">  ├── head</p>
+                                <p id="p4"> └── body</p>
+                                  <p id="p5">    ├── h1</p>
+                                     <p id="p6"> │    └── "Hello World"</p>
+                                      <p id="p7">└── p</p>
+                                       <p id="p8">    └── "This is a paragraph."</p>
+                    </div>
+                    <p>Each tag, attribute,
+                         and text inside the HTML becomes a node.
+                    </p>
+                    <h3>Important Concepts <button id="bC">V</button></h3>
+                    <div class="boxes">
+                        <div class="concepts" id="window">
+                            <h4>🔸 window Object</h4>
+                            <p id="hiddenConcepts">Represents the browser window itself.</p>
+                            <button id="more">More</button>
+                        </div>
+                        <div class="concepts" id="document">
+                            <h4>🔸 document Object</h4>
+                            <p id="hiddenDocuments">Represents the web page that is loaded inside the window.</p>
+                            <button id="moreD">More</button>
+                        </div>
+                        <div class="concepts" id="node">
+                            <h4>🔸 node</h4>
+                            <p id="hiddenNode">A node is a single point in the DOM tree.</p>
+                            <button id="moreN">More</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div id="selectors">
+                <h2>Selectors</h2>
+                <p>To work with an element — such as changing text, color, or style — you must select it first.</p>
+                <div class="types">
+                    <div class="selector" id="s1">
+                        <h3>1. getElementById()</h3>
+                        <p>Selects one element with a specific id.
+
+                            Returns a single element object.</p>
+                        <span> # </span>
+                    </div>
+                    <div class="selector" id="s2">
+                        <h3>2. getElementsByClassName()</h3>
+                        <p>Selects all elements with a specific class name.</p>
+                            <span> . </span>
+                        
+                    </div>
+                    <div class="selector" id="s3">
+                        <h3>3. getElementsByTagName()</h3>
+                        <p>Selects one element with a specific id.
+
+                            Returns a single element object.</p>
+                            <span> p </span>
+                        
+                    </div>
+                    <div class="selector" id="s4">
+                        <h3>4. querySelector()</h3>
+                        <p>Returns the first element that matches a CSS selector.</p>
+                            <span> .# </span>
+                    
+                    </div>
+                    <div class="selector" id="s5">
+                        <h3>5. querySelectorAll()</h3>
+                        <p>Returns all elements matching a CSS selector.</p>
+                        <span> all </span>
+
+                    </div>
+                </div>
+            </div>
+            <div id="changingContents">
+                <h2>Changing Content and Attributes</h2>
+                <p>When you select elements in the DOM, you can
+                     modify what users see — such as changing text, 
+                     updating an image, or toggling a CSS class.
+                </p>
+                <div id="innerText">
+                    <h3> 1. innerText</h3>
+                    <p>Represents visible text within 
+                        an element (ignores hidden elements or extra spaces).
+                    </p>
+                </div>
+                <div id="textContent">
+                    <h3>2. textContent</h3>
+                    <p>Represents all text content, including hidden elements.
+                    </p>
+                </div>
+                <div id="innerHTML">
+                    <h3>3. innerHTML</h3>
+                    <p>Returns or replaces the HTML structure inside an element.
+                    </p>
+                </div>
+            </div>
+            <div id="stylingWithJavaScript">
+                <h2>Styling With JavaScript</h2>
+            </div>
+            <div id="creatingRemovingElements">
+                <h2>Creating and Removing Elements</h2>
+            </div>
+            <div id="eventHandling">
+                <h2>Event Handling</h2>
+            </div>
+            <div id="domTraversas">
+                <h2>DOM Traversal</h2>
+            </div>
+            <div id="miniProject">
+                <h2>Mini Project</h2>
+            </div>
+        </div>
+
+        <footer>
+            <div class="footer1">
+                <ul>
+                    <h4>Contents</h4>
+                    <li><a href="#about">About DOM</a></li>
+                    <li><a href="#selectors">Selectors</a></li>
+                    <li><a href="#changingContents">Changing Content and Attributes</a></li>
+                    <li><a href="#stylingWithJavaScript">Styling With JavaScript</a></li>
+                    <li><a href="#creatingRemovingElements">Creating and Removing Elements</a></li>
+                    <li><a href="#eventHandling">Event Handling</a></li>
+                </ul>
+            </div>
+            <div class="footer2">
+                <ul>
+                    <h4>Quick view</h4>
+                    <li><a href="#getElementById">Get Element By Id</a></li>
+                    <li><a href="#getElementsByClassName">Get Elements By Class Name</a></li>
+                    <li><a href="#getElementsByTagName">Get Elements By Tag Name</a></li>
+                    <li><a href="#querySelector">Query Selector</a></li>
+                    <li><a href="#querySelectorAll">Query Selector All</a></li>
+                    <li><a href="#innerText">Inner Text</a></li>
+                    <li><a href="#innerText">Inner HTML</a></li>
+                    <li><a href="#textContent">Text Content</a></li>
+                </ul>
+            </div>
+        </footer>
+        <div class="bottomend">
+            <p>@document object model</p>
+        </div>
+    
+    <script src="index.js"></script>
+</body>
+</html>
