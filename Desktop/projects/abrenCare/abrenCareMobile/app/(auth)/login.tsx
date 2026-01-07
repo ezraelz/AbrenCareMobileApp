@@ -15,17 +15,16 @@ import {
 import { useRouter } from "expo-router";
 import { Eye, EyeOff } from "lucide-react-native"; // or use @expo/vector-icons if preferred
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import api from "../services/api"; // assuming you have the same api setup
-import { useAuth } from "./contexts/authContext";
+import { useAuth } from "@/app/contexts/authContext";
 
 // Replace this with your actual Logo component or a simple Text placeholder
 const Logo = ({ size = "lg" }: { size?: "sm" | "lg" }) => (
-  <Text style={[styles.logo, size === "lg" && styles.logoLarge]}>MyApp</Text>
+  <Text style={[styles.logo, size === "lg" && styles.logoLarge]}>AbrenCare</Text>
 );
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoading: authLoading } = useAuth();
+  const { login, loading: authLoading } = useAuth();
 
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -59,8 +58,7 @@ export default function LoginScreen() {
 
     try {
       await login(username, password);
-      // Navigation is handled in AuthContext after successful login
-      // Or you can navigate here:
+
       router.replace("/");
     } catch (err: any) {
       setError(err.message || "Invalid username or password");

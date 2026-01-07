@@ -1,172 +1,242 @@
-// context/AuthContext.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+  useCallback,
+} from "react";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../services/api';
+import api from "../../services/api";
+import type { AuthContextType, User, LoginResponse } from "./authTypes";
 
-interface User {
-  id: string;
-  username: string;
-  email?: string;
-  // Add other user fields as needed
-}
+const AuthContext = createContext<AuthContextType | null>(null);
 
-interface AuthContextType {
-  user: User | null;
-  token: string | null;
-  isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  register: (username: string, password: string, email?: string) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in on app start
-  useEffect(() => {
-    checkAuthStatus();
+  /* 🔄 Set axios default headers */
+  const setAuthHeader = (token: string | null) => {
+    if (token) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete api.defaults.headers.common['Authorization'];
+    }
+  };
+
+  /* 🔄 Fetch current user */
+  const fetchCurrentUser = useCallback(async (): Promise<User | null> => {
+    try {
+      const res = await api.get("/profile/");
+      return res.data;
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+      return null;
+    }
   }, []);
 
-  const checkAuthStatus = async () => {
+  /* 🔄 Restore user from token */
+  useEffect(() => {
+    const restoreUser = async () => {
+      try {
+        const access = await AsyncStorage.getItem("access");
+        const refresh = await AsyncStorage.getItem("refresh");
+
+        if (!access || !refresh) {
+          setLoading(false);
+          return;
+        }
+
+        // Set auth header
+        setAuthHeader(access);
+
+        // Try to get user profile
+        const userData = await fetchCurrentUser();
+        if (userData) {
+          setUser(userData);
+          console.log("User restored from access token", userData);
+        } else {
+          await logout();
+        }
+      } catch (err: any) {
+        console.error("Restore user error:", err);
+        
+        // If access token expired, try refresh
+        if (err.response?.status === 401) {
+          try {
+            const refreshToken = await AsyncStorage.getItem("refresh");
+            if (!refreshToken) {
+              await logout();
+              return;
+            }
+
+            const refreshRes = await api.post("/token/refresh/", { 
+              refresh: refreshToken 
+            });
+            
+            const newAccessToken = refreshRes.data.access;
+            await AsyncStorage.setItem("access", newAccessToken);
+            setAuthHeader(newAccessToken);
+
+            const userData = await fetchCurrentUser();
+            if (userData) {
+              setUser(userData);
+              console.log("User restored via refresh token", userData);
+            } else {
+              await logout();
+            }
+          } catch (refreshError) {
+            console.error("Refresh token failed:", refreshError);
+            await logout();
+          }
+        } else {
+          await logout();
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    restoreUser();
+  }, [fetchCurrentUser]);
+
+  /* 🔐 Login */
+  const login = async (username: string, password: string): Promise<LoginResponse> => {
+  setLoading(true);
+  try {
+    const res = await api.post("/token/", { username, password });
+    
+    const { access, refresh } = res.data;
+    
+    // Store tokens
+    await AsyncStorage.multiSet([
+      ['access', access],
+      ['refresh', refresh]
+    ]);
+    
+    // Set auth header
+    setAuthHeader(access);
+    
+    // Fetch user profile
+    const userData = await fetchCurrentUser();
+    if (!userData) {
+      throw new Error("Failed to fetch user after login");
+    }
+    
+    setUser(userData);
+    
+    // Return the login response data
+    return {
+      user: userData,
+      access,
+      refresh
+    };
+    
+  } catch (error: any) {
+    console.error("Login error:", error);
+    
+    if (error.response?.status === 401) {
+      throw new Error("Invalid username or password");
+    } else if (error.response?.status === 400) {
+      throw new Error("Bad request. Please check your input.");
+    } else if (error.message === 'Network Error') {
+      throw new Error("Cannot connect to server. Check your network.");
+    } else {
+      throw new Error("Login failed. Please try again.");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+  /* ✏️ Update user */
+  const updateUser = async (updates: Partial<User>): Promise<User> => {
+    if (!user) {
+      throw new Error("No user is currently logged in");
+    }
+
     try {
-      const storedToken = await AsyncStorage.getItem('userToken');
-      const storedUser = await AsyncStorage.getItem('userData');
+      // Optimistic update for better UX
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+
+      // Send update to server
+      const response = await api.patch(`/profile/${user.id}/`, updates);
+
+      // Update with server response data
+      const serverUpdatedUser = { ...updatedUser, ...response.data };
+      setUser(serverUpdatedUser);
       
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-        // Set token in axios headers
-        api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      console.log("User updated successfully:", serverUpdatedUser);
+      return serverUpdatedUser;
+    } catch (error: any) {
+      // Revert optimistic update on error
+      const originalUser = await fetchCurrentUser();
+      if (originalUser) {
+        setUser(originalUser);
+      }
+      
+      console.error("Failed to update user:", error);
+      throw error;
+    }
+  };
+
+  /* 🔄 Refresh user data from server */
+  const refreshUser = async (): Promise<void> => {
+    try {
+      const userData = await fetchCurrentUser();
+      if (userData) {
+        setUser(userData);
+        console.log("User data refreshed:", userData);
+      } else {
+        await logout();
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
-    } finally {
-      setIsLoading(false);
+      console.error("Failed to refresh user:", error);
+      throw error;
     }
   };
 
-  const login = async (username: string, password: string) => {
-    setIsLoading(true);
-    try {
-      // Using FormData as in your original code
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-
-      const response = await api.post('/login/', formData);
-
-      const { access: authToken, refresh, user: userData } = response.data;
-
-      // Store tokens and user data
-        await AsyncStorage.multiSet([
-        ['accessToken', authToken],      // For Authorization header
-        ['refreshToken', refresh],    // For token refresh
-        ]);
-      // Update state
-      setToken(authToken);
-      setUser(userData);
-
-      // Set token in axios headers for future requests
-      api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
-
-      return response.data;
-    } catch (error: any) {
-      console.error('Login error:', error);
-      
-      // Handle specific error messages from backend
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      } else if (error.response?.status === 401) {
-        throw new Error('Invalid username or password');
-      } else if (error.response?.status === 400) {
-        throw new Error('Bad request. Please check your input.');
-      } else {
-        throw new Error('Login failed. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const register = async (username: string, password: string, email?: string) => {
-    setIsLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-      if (email) formData.append('email', email);
-
-      const response = await api.post('/register', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      // Auto-login after registration
-      await login(username, password);
-
-      return response.data;
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      
-      if (error.response?.data?.detail) {
-        throw new Error(error.response.data.detail);
-      } else if (error.response?.status === 400) {
-        throw new Error('Username already exists');
-      } else {
-        throw new Error('Registration failed. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  /* 🚪 Logout */
   const logout = async () => {
-    setIsLoading(true);
     try {
-      // Call backend logout endpoint if needed
-      await api.post('/logout');
+      // Call logout endpoint if needed
+      await api.post("/logout/");
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout API error:", error);
     } finally {
-      // Clear local storage
-      await AsyncStorage.multiRemove(['userToken', 'userData']);
+      // Clear storage
+      await AsyncStorage.multiRemove(['access', 'refresh']);
       
       // Clear state
-      setToken(null);
       setUser(null);
       
-      // Remove token from axios headers
-      delete api.defaults.headers.common['Authorization'];
+      // Remove auth header
+      setAuthHeader(null);
       
-      setIsLoading(false);
+      console.log("User logged out");
     }
   };
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      token,
-      isLoading,
-      login,
-      logout,
-      register,
-    }}>
+  const value: AuthContextType = {
+    user,
+    loading,
+    login,
+    logout,
+    updateUser,
+    refreshUser,
+    isAuthenticated: !!user,
+  };
+
+  return ( 
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export default AuthContext;
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  return ctx;
+};
